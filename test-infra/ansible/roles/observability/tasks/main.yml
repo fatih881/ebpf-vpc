@@ -25,7 +25,7 @@
   copy:
     src: promtail-config.yaml
     dest: /etc/promtail-config.yaml
-    mode: '0644'
+    mode: '0640'
 
 - name: Copy Promtail service
   copy:

@@ -56,7 +56,9 @@ fi
 # Sanitize Labels (replace spaces with dashes, etc)
 # GitHub labels: alphanumeric, -_., start/end with alphanumeric.
 sanitize() {
-    echo "$1" | sed 's/[^a-zA-Z0-9._-]/-/g'
+    local val="$1"
+    # Replace anything that isn't a-z, A-Z, 0-9, ., _, or - with -
+    echo "${val//[^a-zA-Z0-9._-]/}"
 }
 
 L_KERNEL="kernel-$(sanitize "$KERNEL_VER")"
