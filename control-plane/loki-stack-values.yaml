@@ -4,25 +4,61 @@ loki:
     enabled: true
     size: 10Gi
   config:
-    auth_enabled: false
+    auth_enabled: true
+    # When auth_enabled is true, an X-Scope-OrgID header is required for all push/query requests.
+    # Single-tenant setups can use a default ID like "fake".
+    # Multi-tenant setups should assign unique IDs per worker.
+    # Promtail Client Config Example:
+    # client:
+    #   url: http://loki-gateway/loki/api/v1/push
+    #   tenant_id: fake # Sets the X-Scope-OrgID header
     server:
       http_listen_port: 3100
-    # Allow accepting logs from outside (the workers)
-    # limits_config:
-    #   reject_old_samples: true
-    #   reject_old_samples_max_age: 168h
+    limits_config:
+      # Reject requests with old timestamps.
+      reject_old_samples: true
+      # Maximum age of old samples to accept (e.g., 7 days).
+      reject_old_samples_max_age: 168h
+      # Limit ingestion rate per tenant (e.g., 4 MB/s).
+      ingestion_rate_mb: 4
+      # Limit number of active streams per tenant (e.g., 5000).
+      max_streams_per_user: 5000
 
 promtail:
   enabled: false # We run promtail on the workers, not (necessarily) on the control plane nodes
 
 grafana:
   enabled: true
+  admin:
+    existingSecret: observability-grafana-creds
+  grafana.ini:
+    auth.anonymous:
+      enabled: false # Disable anonymous access for security
+    server:
+      root_url: "%(protocol)s://%(domain)s:%(http_port)s/grafana/" # Ensure correct URL for external access
+    session:
+      cookie_secure: true # Ensure cookies are only sent over HTTPS
+      cookie_samesite: "lax" # Protect against CSRF
   sidecar:
     datasources:
       enabled: true
   persistence:
     enabled: true
     size: 5Gi
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  ingress:
+    enabled: false # Set to true to enable ingress (e.g., if not using Cloudflare Tunnel for Grafana)
+    annotations: {}
+    hosts:
+      - grafana.yourdomain.com # CHANGE THIS IF ingress.enabled IS true
+    path: /
+    tls: []
 
 prometheus:
   enabled: true
@@ -30,6 +66,9 @@ prometheus:
     enabled: false
   pushgateway:
     enabled: false
-  # For workers behind NAT/Tunnel to be scraped, we would need 
-  # a customized discovery or they need to Remote Write.
-  # This sets up the central storage.
+  server:
+    remoteWrite:
+      # Configure Prometheus to accept remote write requests from workers.
+      - url: http://observability-prometheus-server:9090/api/v1/write
+  # For workers behind NAT/Tunnel, metrics are collected via Remote Write.
+  # This sets up the central storage for remote write metrics.
