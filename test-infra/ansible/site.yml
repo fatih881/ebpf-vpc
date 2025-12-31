@@ -1,0 +1,15 @@
+---
+- name: Configure Build Node
+  hosts: localhost
+  connection: local
+  become: true
+  vars:
+    # Default versions, can be overridden
+    runner_version: "2.311.0"
+  
+  roles:
+    - common
+    - networking
+    - github-runner
+    - node-identifier
+    - observability

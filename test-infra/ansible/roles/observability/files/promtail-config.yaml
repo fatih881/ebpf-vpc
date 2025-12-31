@@ -1,0 +1,26 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: ${LOKI_URL}
+    external_labels:
+      kernel: ${LOKI_LABEL_KERNEL}
+      driver: ${LOKI_LABEL_DRIVER}
+      speed: ${LOKI_LABEL_SPEED}
+      model: ${LOKI_LABEL_MODEL}
+      pcie: ${LOKI_LABEL_PCIE}
+      host: ${HOSTNAME}
+
+scrape_configs:
+  - job_name: journal
+    journal:
+      max_age: 12h
+      labels:
+        job: systemd-journal
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: 'unit'

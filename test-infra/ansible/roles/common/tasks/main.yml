@@ -1,0 +1,12 @@
+---
+- name: Install base dependencies
+  dnf:
+    name:
+      - git
+      - curl
+      - jq
+      - ethtool
+      - pciutils
+      - iproute
+      - unzip
+    state: present

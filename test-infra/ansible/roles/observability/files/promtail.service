@@ -1,0 +1,14 @@
+[Unit]
+Description=Promtail service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+EnvironmentFile=-/etc/ebpf-vpc/runner-config.env
+EnvironmentFile=-/etc/ebpf-vpc/promtail.env
+ExecStart=/usr/local/bin/promtail -config.file=/etc/promtail-config.yaml -config.expand-env=true
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

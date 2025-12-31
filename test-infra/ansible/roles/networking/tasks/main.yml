@@ -1,0 +1,21 @@
+---
+- name: Download cloudflared
+  get_url:
+    url: "https://github.com/cloudflare/cloudflared/releases/download/2024.1.5/cloudflared-linux-amd64"
+    dest: /usr/local/bin/cloudflared
+    mode: '0755'
+
+- name: Copy cloudflared service
+  copy:
+    src: cloudflared.service
+    dest: /etc/systemd/system/cloudflared.service
+    mode: '0644'
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Enable cloudflared service
+  systemd:
+    name: cloudflared
+    enabled: yes

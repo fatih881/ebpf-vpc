@@ -1,0 +1,24 @@
+---
+- name: Create runner directory
+  file:
+    path: /opt/actions-runner
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Download GitHub Actions Runner
+  get_url:
+    url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/actions-runner-linux-x64-{{ runner_version }}.tar.gz"
+    dest: /tmp/actions-runner.tar.gz
+
+- name: Extract GitHub Actions Runner
+  unarchive:
+    src: /tmp/actions-runner.tar.gz
+    dest: /opt/actions-runner
+    remote_src: yes
+
+- name: Install runner dependencies
+  command: /opt/actions-runner/bin/installdependencies.sh
+  args:
+    chdir: /opt/actions-runner

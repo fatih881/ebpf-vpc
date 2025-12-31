@@ -1,0 +1,13 @@
+[Unit]
+Description=One-shot Node Identification and Runner Registration
+After=network-online.target cloud-init.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/identify_and_register.sh
+RemainAfterExit=yes
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target
