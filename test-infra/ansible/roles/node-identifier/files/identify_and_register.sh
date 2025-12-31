@@ -81,7 +81,11 @@ echo "Registering runner with labels: $LABELS"
 } > /etc/ebpf-vpc/promtail.env
 
 # 2. Register Runner
-./config.sh --unattended \
+RUNNER_USER="fedora"
+chown -R "$RUNNER_USER:$RUNNER_USER" "$RUNNER_DIR"
+
+# Run config.sh as the runner user
+runuser -u "$RUNNER_USER" -- ./config.sh --unattended \
   --url "$GITHUB_URL" \
   --token "$GITHUB_TOKEN" \
   --labels "$LABELS" \
@@ -89,7 +93,8 @@ echo "Registering runner with labels: $LABELS"
   --replace
 
 # 3. Install and Start Service
-./svc.sh install root
+# svc.sh install [user] installs the systemd service to run as [user]
+./svc.sh install "$RUNNER_USER"
 ./svc.sh start
 
 # 4. Restart Promtail to pick up new labels
