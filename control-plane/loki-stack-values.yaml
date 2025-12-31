@@ -1,0 +1,35 @@
+loki:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 10Gi
+  config:
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    # Allow accepting logs from outside (the workers)
+    # limits_config:
+    #   reject_old_samples: true
+    #   reject_old_samples_max_age: 168h
+
+promtail:
+  enabled: false # We run promtail on the workers, not (necessarily) on the control plane nodes
+
+grafana:
+  enabled: true
+  sidecar:
+    datasources:
+      enabled: true
+  persistence:
+    enabled: true
+    size: 5Gi
+
+prometheus:
+  enabled: true
+  alertmanager:
+    enabled: false
+  pushgateway:
+    enabled: false
+  # For workers behind NAT/Tunnel to be scraped, we would need 
+  # a customized discovery or they need to Remote Write.
+  # This sets up the central storage.
