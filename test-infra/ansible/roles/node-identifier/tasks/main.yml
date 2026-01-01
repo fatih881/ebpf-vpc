@@ -1,0 +1,27 @@
+---
+- name: Create configuration directory
+  file:
+    path: /etc/ebpf-vpc
+    state: directory
+    mode: '0700'
+
+- name: Copy identification script
+  copy:
+    src: identify_and_register.sh
+    dest: /usr/local/bin/identify_and_register.sh
+    mode: '0755'
+
+- name: Copy systemd service
+  copy:
+    src: node-identifier.service
+    dest: /etc/systemd/system/node-identifier.service
+    mode: '0644'
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Enable node-identifier service
+  systemd:
+    name: node-identifier
+    enabled: yes

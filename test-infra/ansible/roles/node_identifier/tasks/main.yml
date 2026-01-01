@@ -1,0 +1,24 @@
+---
+- name: Install Identification Script
+  ansible.builtin.template:
+    src: identify_and_register.sh
+    dest: /usr/local/bin/identify_and_register.sh
+    mode: '0755'
+
+- name: Install Systemd Service
+  ansible.builtin.copy:
+    src: node-identifier.service
+    dest: /etc/systemd/system/node-identifier.service
+    mode: '0644'
+  notify: Reload Systemd
+
+- name: Enable Node Identifier Service
+  ansible.builtin.systemd:
+    name: node-identifier
+    enabled: true
+    state: started
+
+handlers:
+  - name: Reload Systemd
+    ansible.builtin.systemd:
+      daemon_reload: true

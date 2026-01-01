@@ -1,0 +1,8 @@
+---
+- name: Install Cleanup Script
+  ansible.builtin.copy:
+    src: ebpf-cleanup.sh
+    dest: /usr/local/bin/ebpf-cleanup
+    mode: '0755'
+    owner: root
+    group: root

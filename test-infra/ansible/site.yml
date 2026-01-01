@@ -1,0 +1,11 @@
+---
+- name: Configure Bare-Metal Integration Test & Benchmark Environment
+  hosts: all
+  become: true
+  
+  roles:
+    - preflight
+    - performance
+    - observability
+    - cleanup
+    - node_identifier

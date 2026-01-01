@@ -1,0 +1,11 @@
+---
+- name: Install Node Exporter
+  ansible.builtin.package:
+    name: prometheus-node-exporter
+    state: present
+
+- name: Enable Node Exporter
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter
+    enabled: true
+    state: started

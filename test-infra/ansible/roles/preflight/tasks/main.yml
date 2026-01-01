@@ -1,0 +1,23 @@
+---
+- name: Verify Kernel Configuration for BPF/XDP
+  ansible.builtin.assert:
+    that:
+      - "ansible_kernel_config['CONFIG_BPF_JIT'] == 'y'"
+      - "ansible_kernel_config['CONFIG_XDP_SOCKETS'] == 'y'"
+    fail_msg: "Kernel missing required BPF/XDP configuration."
+    quiet: true
+
+- name: Create dummy interface for XDP capability check
+  ansible.builtin.command: ip link add dev dummy_xdp type dummy
+  changed_when: false
+  failed_when: false
+
+- name: Check BPF Tool availability
+  ansible.builtin.command: which bpftool
+  register: bpftool_check
+  failed_when: bpftool_check.rc != 0
+
+- name: Clean up dummy interface
+  ansible.builtin.command: ip link del dev dummy_xdp
+  changed_when: false
+  failed_when: false
