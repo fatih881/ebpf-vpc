@@ -1,0 +1,8 @@
+---
+- name: Configure Test Infrastructure
+  hosts: all
+  become: yes
+  roles:
+    - common
+    - hardware-check
+    - security

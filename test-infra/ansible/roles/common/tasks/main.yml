@@ -1,0 +1,20 @@
+---
+- name: Install required packages
+  dnf:
+    name:
+      - ccache
+      - git
+      - make
+      - clang
+      - llvm
+      - kernel-devel
+      - elfutils-libelf-devel
+      - bpftool
+    state: present
+
+- name: Configure ccache
+  copy:
+    dest: /etc/profile.d/ccache.sh
+    content: |
+      export PATH="/usr/lib64/ccache:$PATH"
+    mode: '0644'

@@ -1,0 +1,34 @@
+---
+- name: Ensure libbpf-devel is installed
+  dnf:
+    name: libbpf-devel
+    state: present
+
+- name: Verify BPF JIT is enabled
+  shell: sysctl -n net.core.bpf_jit_enable
+  register: bpf_jit_status
+  failed_when: bpf_jit_status.stdout != "1"
+
+- name: Create dummy interface
+  command: ip link add dev test_xdp type dummy
+  ignore_errors: yes
+
+- name: Bring up dummy interface
+  command: ip link set dev test_xdp up
+
+- name: Copy XDP program source
+  copy:
+    src: xdp_drop.c
+    dest: /tmp/xdp_drop.c
+
+- name: Compile XDP program
+  command: clang -O2 -g -target bpf -c /tmp/xdp_drop.c -o /tmp/xdp_drop.o
+
+- name: Load XDP program
+  command: ip link set dev test_xdp xdp obj /tmp/xdp_drop.o sec xdp
+
+- name: Unload XDP program
+  command: ip link set dev test_xdp xdp off
+
+- name: Remove dummy interface
+  command: ip link delete test_xdp
