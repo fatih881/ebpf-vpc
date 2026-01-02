@@ -14,11 +14,19 @@
     mode: '0440'
     validate: 'visudo -cf %s'
 
-- name: Remove other sudoers configurations (optional security hardening)
-  # Be careful not to lock ourselves out if we were relying on other files
-  # For this specific image build, we assume 'fedora' is the only admin user needed.
-  shell: rm -f /etc/sudoers.d/* && echo "fedora ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/ci-runner
-  ignore_errors: yes
+- name: Find other sudoers files
+  find:
+    paths: /etc/sudoers.d
+    patterns: '*'
+    excludes: 'ci-runner'
+  register: sudoers_files
+
+- name: Remove other sudoers files
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ sudoers_files.files }}"
+  when: sudoers_files.matched > 0
 
 - name: Install Firewall Lockdown Script
   template:
@@ -35,11 +43,5 @@
 - name: Enable Firewall Lockdown Service
   systemd:
     name: firewall-lockdown.service
-    enabled: yes
-    daemon_reload: yes
-
-handlers:
-  - name: Restart sshd
-    service:
-      name: sshd
-      state: restarted
+    enabled: true
+    daemon_reload: true
