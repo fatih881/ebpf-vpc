@@ -1,0 +1,114 @@
+name: CI Workflow
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  provision-runner:
+    name: Provision AWS Runner
+    environment: aws
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init & Apply
+        working-directory: test-infra/terraform/aws
+        env:
+          TF_VAR_gh_runner_token: ${{ secrets.GH_RUNNER_TOKEN }}
+          TF_VAR_gh_owner: ${{ github.repository_owner }}
+          TF_VAR_gh_repo: ${{ github.event.repository.name }}
+          TF_VAR_subnet_id: ${{ secrets.AWS_RUNNER_SUBNET_ID }}
+          TF_VAR_security_group_ids: ${{ secrets.AWS_RUNNER_SECURITY_GROUP_IDS }}
+        run: |
+          terraform init
+          terraform apply -auto-approve
+
+      - name: Upload Terraform State
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfstate
+          path: test-infra/terraform/aws/terraform.tfstate
+          retention-days: 1
+
+  core-quality-check:
+    name: Build, Test & Lint
+    needs: provision-runner
+    runs-on: [self-hosted, linux, fedora]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.22'
+
+      - name: Install clang-format
+        run: sudo dnf install -y clang-tools-extra
+
+      - name: Check C/eBPF code style with clang-format
+        run: |
+          find . -path "./vendor" -prune -o -name "*.c" -print0 | xargs -0 clang-format --dry-run --Werror
+          find . -path "./vendor" -prune -o -name "*.h" -print0 | xargs -0 clang-format --dry-run --Werror
+
+      - name: Go Build
+        run: go build ./...
+
+      - name: Go run unit Test
+        run: go test -v -tags=unit ./...
+
+      - name: Run GolangCI-Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          args: --verbose
+
+  teardown-runner:
+    name: Teardown AWS Runner
+    needs: [provision-runner, core-quality-check]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Download Terraform State
+        uses: actions/download-artifact@v4
+        with:
+          name: tfstate
+          path: test-infra/terraform/aws
+
+      - name: Terraform Destroy
+        working-directory: test-infra/terraform/aws
+        env:
+          TF_VAR_gh_runner_token: ${{ secrets.GH_RUNNER_TOKEN }}
+          TF_VAR_gh_owner: ${{ github.repository_owner }}
+          TF_VAR_gh_repo: ${{ github.event.repository.name }}
+          TF_VAR_subnet_id: ${{ secrets.AWS_RUNNER_SUBNET_ID }}
+          TF_VAR_security_group_ids: ${{ secrets.AWS_RUNNER_SECURITY_GROUP_IDS }}
+        run: |
+          terraform init
+          terraform destroy -auto-approve
