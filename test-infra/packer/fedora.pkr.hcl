@@ -52,9 +52,15 @@ source "qemu" "fedora" {
 
 build {
   sources = ["source.qemu.fedora"]
+  provisioner "file" {
+    source      = "/home/sysadmin/.ssh/ansible.pub"
+    destination = "/tmp/ansible.pub"
+  }
 
   provisioner "shell" {
     inline = [
+      "mkdir -p /home/fedora/.ssh",
+      "mv /tmp/ansible.pub /home/fedora/.ssh/ansible.pub",
       "sudo dnf install -y ansible-core",
       "ansible-galaxy install geerlingguy.docker",
       "ansible-galaxy install geerlingguy.pip",
@@ -68,16 +74,10 @@ build {
     playbook_file = "../ansible/site.yml"
     extra_arguments = [
       "--extra-vars", "ansible_user=fedora",
+      "--extra-vars", "ansible_sudo_pass=packer",
       "--extra-vars", "ssh_key_root=/dev/null",
       "--extra-vars", "ssh_key_ansible=/dev/null",
       "-c", "local"
-    ]
-  }
-
-  provisioner "shell" {
-    inline = [
-      "sudo passwd -l fedora",
-      "sudo rm -f /etc/ssh/ssh_host_*",
     ]
   }
 }

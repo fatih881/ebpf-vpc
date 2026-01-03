@@ -1,2 +1,2 @@
-instance-id: packer-build-id
-local-hostname: fedora-packer
+instance-id: packer-build
+local-hostname: packer-build

@@ -1,0 +1,88 @@
+---
+- name: Configure Base System
+  hosts: all
+  become: true
+  vars_files:
+    - vars.yaml
+    - secrets.yml 
+  vars:
+    ansible_user: ansible
+    ansible_ssh_private_key_file: "{{ ssh_key_ansible }}"
+  roles:
+    - geerlingguy.pip
+    - geerlingguy.docker
+  tasks:
+    - name: Hostname 
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+
+    - name: Set timezone to UTC 
+      community.general.timezone:
+        name: UTC
+
+    - name: Install NTP (Chrony)
+      ansible.builtin.package:
+        name: chrony
+        state: present
+
+    - name: enable and start NTP 
+      ansible.builtin.service:
+        name: "{{ 'chronyd' if ansible_os_family == 'RedHat' else 'chrony' }}"
+        state: started
+        enabled: true
+    - name: Make Directory (/opt/stack)
+      file:
+        path: /opt/stack
+        state: directory
+        mode: '0755'
+
+    - name: Make Loki Data Directory
+      file:
+        path: /opt/stack/loki-data
+        state: directory
+        mode: '0777'
+
+    - name: Pull Docker Compose 
+      template:
+        src: "{{ item }}"
+        dest: "/opt/stack/{{ item | basename | regex_replace('.j2$', '') }}"
+        mode: '0640'
+      loop:
+        - templates/docker-compose.yml.j2
+    - name: Create Environment Variables
+      copy:
+        dest: /opt/stack/.env
+        mode: '0600'
+        content: |
+          GITHUB_URL={{ github_repo_url }}
+          GITHUB_TOKEN={{ github_pat }}
+          RUNNER_NAME={{ inventory_hostname }}-runner
+          CLOUDFLARE_TUNNEL_TOKEN={{ cloudflare_tunnel_token }}
+          GRAFANA_DOMAIN={{ grafana_domain }}
+
+    - name: Pull Stack Containers (Runner, Prom, Grafana, Loki)
+      copy:
+        src: "{{ item }}/" 
+        dest: "/opt/stack/{{ item }}/"
+        mode: '0755'
+      loop:
+        - ci-runner
+        - prometheus
+        - loki
+        - grafana
+    - name: Pull Docker Compose Images
+      command: docker compose pull
+      args:
+        chdir: /opt/stack
+
+    - name: Install Systemd Service To Start Containers On Boot
+      template:
+        src: templates/stack.service.j2
+        dest: /etc/systemd/system/stack.service
+        mode: '0644'
+
+    - name: Enable Stack Service
+      systemd:
+        name: stack
+        enabled: yes
+        daemon_reload: yes

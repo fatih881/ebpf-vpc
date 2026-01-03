@@ -1,11 +1,5 @@
 #cloud-config
-users:
-  - name: fedora
-    groups: [wheel]
-    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
-    shell: /bin/bash
-ssh_pwauth: true
-chpasswd:
-  list: |
-    fedora:packer
-  expire: False
+user: fedora
+password: packer
+chpasswd: { expire: False }
+ssh_pwauth: True

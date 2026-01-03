@@ -1,0 +1,4 @@
+---
+ansible_user: Example 
+ssh_key_ansible: /path/to/ssh/key
+ssh_key_root: /path/to/ssh/key
