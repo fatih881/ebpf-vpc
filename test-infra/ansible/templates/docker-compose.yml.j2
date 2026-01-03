@@ -1,0 +1,62 @@
+services:
+  github-runner:
+    build:
+      context: ./ci-runner
+      args:
+        GH_TOKEN: "${GITHUB_TOKEN}"
+    privileged: true
+    network_mode: host
+    restart: always
+    environment:
+      GH_REPO_URL: "{{ github_repo_url }}"
+      GH_PAT: "${GITHUB_TOKEN}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  prometheus:
+    image: prom/prometheus:v2.47.2
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  loki:
+    image: grafana/loki:2.9.2
+    restart: always
+    user: "root"
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki:/etc/loki
+      - ./loki-data:/loki
+    command:
+      - '-config.file=/etc/loki/loki-config.yml'
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_USER={{ grafana_admin_user }}
+      - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: always
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN={{ cloudflare_tunnel_token }}
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    restart: always
+    ports:
+      - "9100:9100"
+    volumes:
+      - /:/host:ro,rslave
+    command:
+      - '--path.rootfs=/host'

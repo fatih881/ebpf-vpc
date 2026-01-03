@@ -1,0 +1,51 @@
+---
+- import_playbook: bootstrap.yaml
+- hosts: all
+  gather_facts: false
+  tasks:
+    - meta: clear_host_errors
+- import_playbook: controlplane.yaml
+- name: "Install Docker and Docker Compose"
+  hosts: all
+  become: true
+  roles:
+    - geerlingguy.docker
+
+- name: "Deploy Ops Stack"
+  hosts: all
+  become: true
+  vars_files:
+    - secrets.yml
+  vars:
+    domain_name: 
+    acme_email:
+  tasks:
+    - name: "Create project directory"
+      ansible.builtin.file:
+        path: /opt/stack
+        state: directory
+        mode: '0755'
+
+    - name: "Copy docker-compose.yml"
+      ansible.builtin.template:
+        src: templates/docker-compose.yml.j2
+        dest: /opt/stack/docker-compose.yml
+        mode: '0644'
+
+    - name: "Create .env file"
+      ansible.builtin.template:
+        src: templates/.env.j2
+        dest: /opt/stack/.env
+        mode: '0644'
+    - name: "Start the stack"
+      community.docker.docker_compose_v2:
+        project_src: /opt/stack
+        state: present
+        pull: always
+        recreate: "always"
+    - name: "Start the stack"
+      community.docker.docker_compose_v2:
+        project_src: /opt/stack
+        state: present
+        pull: always
+        remove_orphans: true
